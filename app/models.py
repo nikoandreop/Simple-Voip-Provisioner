@@ -33,7 +33,8 @@ class ProvisionResponse(BaseModel):
     vendor: Vendor
     model: str
     config_filename: str
-    firmware_url: str
+    firmware_url: str | None
     config_url: str
     protocol: Literal["tftp", "ftp", "https"]
-    config_body: str
+    config_saved: bool
+    firmware_found: bool

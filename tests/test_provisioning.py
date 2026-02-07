@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.settings import settings
 
 
 client = TestClient(app)
@@ -12,7 +15,19 @@ def test_health():
     assert response.json()['status'] == 'ok'
 
 
-def test_provision_for_yealink_https():
+def test_ready():
+    response = client.get('/ready')
+    assert response.status_code == 200
+    assert response.json()['firmware_root_exists'] is True
+    assert response.json()['configs_root_exists'] is True
+
+
+def test_provision_firmware_found(tmp_path: Path):
+    vendor_model = settings.firmware_root / 'yealink' / 'T46U'
+    vendor_model.mkdir(parents=True, exist_ok=True)
+    fw = vendor_model / 'firmware.rom'
+    fw.write_text('dummy', encoding='utf-8')
+
     payload = {
         'mac': 'aa:bb:cc:dd:ee:ff',
         'vendor': 'yealink',
@@ -29,9 +44,9 @@ def test_provision_for_yealink_https():
     body = response.json()
 
     assert body['mac'] == 'AABBCCDDEEFF'
-    assert body['config_filename'] == 'yAABBCCDDEEFF.cfg'
+    assert body['firmware_found'] is True
+    assert body['firmware_url'].endswith('/firmware/yealink/T46U/firmware.rom')
     assert body['config_url'].startswith('https://')
-    assert 'account.1.user_name = 1001' in body['config_body']
 
 
 def test_provision_bad_mac_rejected():
@@ -48,4 +63,4 @@ def test_provision_bad_mac_rejected():
 
     response = client.post('/api/provision', json=payload)
     assert response.status_code == 400
-    assert '12 hex' in response.json()['detail']
+    assert 'hexadecimal' in response.json()['detail']

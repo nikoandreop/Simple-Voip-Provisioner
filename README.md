@@ -1,29 +1,49 @@
 # Simple VoIP Provisioner
 
-A starter VoIP phone provisioner for:
+Production-oriented VoIP phone provisioner for:
 
 - Polycom
 - Yealink
 - Grandstream
 - Cisco
 
-It exposes:
+## What it does
 
-- A Web UI at `/` to generate phone profiles
-- A REST API at `POST /api/provision` to generate provisioning metadata by MAC
-- Per-vendor configuration templates
-- Firmware URL generation supporting `tftp`, `ftp`, and `https`
+- API endpoint to generate per-device config from MAC + SIP details.
+- Saves config files to a server folder (`PROVISIONER_CONFIGS_ROOT`).
+- Checks a server firmware folder (`PROVISIONER_FIRMWARE_ROOT`) for vendor/model firmware files.
+- Returns URLs for config and firmware over TFTP/FTP/HTTPS.
+- Serves config and firmware folders via `/configs/*` and `/firmware/*`.
 
-## Quick start
+## Environment
+
+```bash
+PROVISIONER_HOST=provisioner.example.com
+PROVISIONER_FIRMWARE_ROOT=/srv/voip/firmware
+PROVISIONER_CONFIGS_ROOT=/srv/voip/configs
+PROVISIONER_MAX_CONFIG_SIZE=65536
+```
+
+## Firmware folder layout
+
+The provisioner checks this structure and picks the newest file by modification time:
+
+```text
+/srv/voip/firmware/
+  polycom/VVX450/<firmware_file>
+  yealink/T46U/<firmware_file>
+  grandstream/GRP2612/<firmware_file>
+  cisco/CP-8841/<firmware_file>
+```
+
+## Run
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
-
-Open http://127.0.0.1:8000
 
 ## API example
 
@@ -42,12 +62,8 @@ curl -X POST http://127.0.0.1:8000/api/provision \
   }'
 ```
 
-## Notes
+## Health
 
-This is intentionally simple and intended as a foundation. In production, add:
+- `GET /health`
+- `GET /ready`
 
-- AuthN/AuthZ
-- Encryption-at-rest for secrets
-- Persistent storage of profiles/tenants
-- Actual firmware hosting with checksum validation
-- Vendor-specific config parameters beyond baseline SIP settings
